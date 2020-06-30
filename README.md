@@ -9,6 +9,7 @@
 * java
 * jsp
 * Oracle
+* tomcat 8.5
 
 ## 개발내용
 
