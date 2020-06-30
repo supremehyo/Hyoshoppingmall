@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shoppingmall.mappers.homeMapper">
+   
+	<!-- 최근 후기 3개 -->
+<select id="lastestReply" resultType="com.shoppingmall.VO.LatestReply">
+ 	select gdsNum ,userId , repCon , repDate , gdsThumbImg  from (select r.gdsNum ,userId , repCon , repDate , gdsThumbImg  from tbl_reply r  inner join tbl_goods g on g.gdsnum = r.gdsnum ORDER by ROWNUM DESC) where ROWNUM <![CDATA[ <=]]>  3
+</select>
+
+
+</mapper>

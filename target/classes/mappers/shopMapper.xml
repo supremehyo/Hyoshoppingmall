@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shoppingmall.mappers.shopMapper">
+   
+
+<!-- 카테고리별 상품 리스트 : 1차 분류 -->
+<select id="list_1" resultType="com.shoppingmall.VO.GoodsView">
+select
+    g.gdsNum, g.gdsName, g.cateCode, c.cateCodeRef, c.cateName,
+    gdsPrice, gdsStock, gdsDes, gdsDate, g.gdsImg, g.gdsThumbImg
+        from tbl_goods g
+            inner join goods_category c
+                on g.cateCode = c.cateCode           
+            where g.cateCode = #{cateCode}
+             or c.cateCodeRef = #{cateCodeRef} ORDER BY gdsNum DESC
+</select>
+
+<!-- 카테고리별 상품 리스트 : 2차 분류 -->
+<select id="list_2" resultType="com.shoppingmall.VO.GoodsView">
+select
+    g.gdsNum, g.gdsName, g.cateCode, c.cateCodeRef, c.cateName,
+    gdsPrice, gdsStock, gdsDes, gdsDate, g.gdsImg, g.gdsThumbImg
+        from tbl_goods g
+            inner join goods_category c
+                on g.cateCode = c.cateCode           
+            where g.cateCode = #{cateCode} ORDER BY gdsNum DESC
+</select>
+
+  <!-- 상품 조회 + 카테고리 조인-->
+<select id="goodsView" resultType="com.shoppingmall.VO.GoodsView">
+ select
+     g.gdsNum, g.gdsName, g.cateCode, c.cateCodeRef, c.cateName, gdsPrice, gdsStock, gdsDes, gdsImg, gdsDate,g.gdsImg, g.gdsThumbImg
+         from tbl_goods g
+             inner join goods_category c
+                 on g.cateCode = c.cateCode          
+            where g.gdsNum = #{gdsNum}
+</select>
+
+<!--  상품 소감(댓글)  작성-->
+<insert id="registReply">
+ insert into tbl_reply (gdsNum, userId, repNum, repCon)
+     values (#{gdsNum}, #{userId}, tbl_reply_seq.nextval, #{repCon})
+</insert>
+
+<!--  상품 댓글 리스트 출력 -->
+
+<select id="replyList" resultType = "com.shoppingmall.VO.ReplyList">
+    select  r.gdsNum , r.userId , r.repNum , r.repCon , r.repDate , m.userName
+    from tbl_reply r
+     inner join tbl_member m
+      on r.userId = m.userId
+       where gdsNum = #{gdsNum}
+</select>
+
+
+<!--  댓글 삭제 -->
+
+<delete id = "deleteReply">
+	delete tbl_reply
+		where repNum = #{repNum}
+			and userId = #{userId}
+</delete>
+<!-- 댓글 수정 -->
+
+<update id = "modifyReply">
+	update tbl_reply
+		 set
+		 		repCon = #{repCon}
+		 where repNum = #{repNum}
+		 	and userId = #{userId}
+</update>
+
+<!--  댓글이 본인이 작성한게 맞는지 체크 -->
+<select id = "replyUserIdCheck" resultType = "String">
+	select userId
+		from tbl_reply
+			where repNum = #{repNum}
+</select>
+
+<!--  카트담기 -->
+<insert id="addCart">
+	insert into tbl_cart(cartNum, userId , gdsNum,cartStock)
+		values(tbl_cart_seq.nextval , #{userId} , #{gdsNum} , #{cartStock})
+</insert>
+
+<!-- 카트 리스트 -->
+<select id="cartList" resultType="com.shoppingmall.VO.CartList">
+ select
+     row_number() over(order by c.cartNum desc) as num,
+     c.cartNum, c.userId, c.gdsNum, c.cartStock, c.addDate,
+     g.gdsName, g.gdsPrice, g.gdsThumbImg
+ from tbl_cart c
+     inner join tbl_goods g
+         on c.gdsNum = g.gdsNum   
+     where c.userId = #{userId}
+</select>
+
+<!--  카트삭제 -->
+<delete id="deleteCart">
+	delete tbl_cart
+		where cartNum = #{cartNum}
+			and userId = #{userId}
+</delete>
+
+<!-- 주문 정보 -->
+<insert id="orderInfo">
+ insert into tbl_order(orderId, userId, orderRec, userAddr1, userAddr2, userAddr3, orderPhon, amount)
+     values(#{orderId}, #{userId}, #{orderRec}, #{userAddr1}, #{userAddr2}, #{userAddr3}, #{orderPhon}, #{amount})
+</insert>
+   
+<!-- 주문 상세 정보 --> 
+<insert id="orderInfo_Details">
+		insert into tbl_order_details(orderDetailsNum, orderId, gdsNum, cartStock)
+		    select tbl_order_details_seq.nextval, #{orderId}, gdsNum, cartStock
+		        from tbl_cart  where userId = #{userId}
+</insert> 
+
+<!-- 카트 비우기 -->
+<delete id="cartAllDelete">
+ delete tbl_cart
+     where userId = #{userId}
+</delete>
+
+<!-- 특정 유저의 주문 목록 -->
+<select id="orderList" resultType="com.shoppingmall.VO.Order">
+ select
+     orderId, userId, orderRec, userAddr1, userAddr2, userAddr3, orderPhon, amount, orderDate , delivery
+ from tbl_order 
+     where userId = #{userId}
+</select>
+
+
+<!-- 물건 클릭 조회수 -->
+<select id ="objectCountSearch" resultType="com.shoppingmall.VO.ObjectCount">
+	select gdsNum from tbl_objectcount where gdsNum = #{gdsNum}
+</select>
+
+<!-- 물건 클릭 조회수 -->
+<insert id ="objectCountinit">
+ insert into tbl_objectcount(amount , gdsNum , cateCode1)
+     values(0 , #{gdsNum} , #{cateCode1})
+</insert>
+
+<!-- 물건 클릭 조회수 -->
+<update id ="objectCountUpdate" parameterType="int">
+	update tbl_objectcount
+		set amount =amount+1
+	where gdsNum = #{gdsNum}
+</update>
+
+<!--  해당 카테고리에서 상위 3개 뽑는 동작 -->
+<select id ="objectCountTop" resultType="com.shoppingmall.VO.ObjectCount">
+			SELECT gdsNum FROM (SELECT gdsNum FROM tbl_objectcount where 
+			<choose>
+				<when test = 'cateCode1 == 100'>
+			 		cateCode1 like '1%'
+				</when>
+				<when test = 'cateCode1 == 200'>
+			 		cateCode1 like '2%'
+				</when>
+				<when test = 'cateCode1 == 300'>
+			 		cateCode1 like '3%'
+				</when>
+			 	<when test = 'cateCode1 == 400'>
+			 		cateCode1 like '4%'
+				</when>
+				<otherwise>
+					cateCode1=#{cateCode1}
+				</otherwise>
+			</choose>
+			 ORDER BY amount DESC) WHERE ROWNUM<![CDATA[ <=]]> 4
+</select>
+
+<!--  추천 상품 정보 -->
+<select id ="objectRecommended" resultType="com.shoppingmall.VO.Goods">
+	select    
+        gdsName,cateCode,gdsPrice , gdsStock,gdsDes ,gdsNum , gdsThumbImg
+         	from tbl_goods where gdsNum = #{gdsNum}
+</select>
+
+
+<!-- 검색 리스트 -->
+<select id="searchList" resultType="com.shoppingmall.VO.GoodsView">   		
+    select  
+		  g.gdsNum, g.gdsName, g.cateCode, c.cateCodeRef, c.cateName,
+          gdsPrice, gdsStock, gdsDes, gdsDate, g.gdsImg, g.gdsThumbImg
+    		from tbl_goods g 
+                inner join goods_category c
+                    on g.catecode = c.catecode
+            where g.gdsName like '%'||#{title}||'%' or c.cateName like '%'||#{title}||'%' ORDER BY gdsNum DESC
+            
+</select>
+
+<!-- 주문번호 눌렀을때 주문 목록  -->
+<select id="orderView" resultType="com.shoppingmall.VO.OrderList">
+ select
+     o.orderId, o.userId, o.orderRec, o.userAddr1, o.userAddr2, o.userAddr3, o.orderPhon, o.amount, o.orderDate,
+     o.delivery,d.orderDetailsNum, d.gdsNum, d.cartStock,
+     g.gdsName, g.gdsThumbImg, g.gdsPrice
+ from tbl_order o
+         inner join tbl_order_details d
+             on o.orderId = d.orderId
+         inner join tbl_goods g
+             on d.gdsNum = g.gdsNum
+     where o.userId = #{userId}
+         and o.orderId = #{orderId}
+</select>
+
+<!-- 2차 카테고리 화면 출력용 -->
+<select id="secondCateList" resultType ="com.shoppingmall.VO.Category">
+	select
+		cateName, cateCode, cateCodeRef
+			from goods_category where cateCodeRef = #{cateCode1}
+			
+</select>
+
+
+</mapper>
